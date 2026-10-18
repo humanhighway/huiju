@@ -236,6 +236,7 @@ const CONFIG = {
   fontSheet: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&family=Unbounded:wght@800&display=swap&text=',
   fontWait: 1500,         // ms before local faces stand in for web fonts that have not arrived
   wideFrom: 1.3,          // width / height above which the two characters sit side by side
+  titleSize: 0.9,         // on an upright sheet, the characters' size as a share of the most it gives them
   datePlace: 'below',     // 'below' the title or, upright, 'between' its characters
   dateWidth: 0.6,         // the date's width as a share of a character's
   dateGap: 0.75,          // room between the date's year, month and day, in its digits' heights
@@ -1085,7 +1086,7 @@ function cutType(W, H, ready) {
     setCharacter(ctx, second, S, left + w1 + gap + w2 / 2, top + tall / 2);
     setDateLine(ctx, 0.5 * W, top + tall + under, across);
   } else {
-    const S = Math.min(0.54 * W, 0.38 * H);
+    const S = CONFIG.titleSize * Math.min(0.54 * W, 0.38 * H);
     const [w1, h1] = inkOf(first, S), [w2, h2] = inkOf(second, S);
     const across = share * Math.max(w1, w2), date = setDateLine(null, 0, 0, across);
     const between = place === 'between';
