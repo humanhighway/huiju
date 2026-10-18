@@ -70,8 +70,12 @@
   }
   @media (hover: hover) { #dial #tools button:hover, #rivers #near:hover, #rivers #chart:hover { background: #2d313a; } }
   /* A word over the capsule on what the nearest stretch is, or why there is none. */
-  #where { margin: 0; padding: 8px 14px; border-radius: 999px; background: #1d2026; color: #f8f6ee; font-size: 12px; }
-  #where[hidden] { display: none; }
+  #where {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 4px);
+    margin: 0; padding: 8px 14px; border-radius: 999px; background: #1d2026; color: #f8f6ee; font-size: 12px;
+    opacity: 0; pointer-events: none; transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  #where.shown { opacity: 1; transform: translate(-50%, 0); }
   dialog { border: 0; padding: 0; background: none; max-width: none; max-height: none; overflow: visible; color: #f8f6ee; }
   dialog[open] { display: flex; flex-direction: column; align-items: center; gap: 16px; }
   dialog::backdrop { background: rgb(29 32 38 / 0.92); }
@@ -98,6 +102,10 @@
   }
   #map { display: block; width: 100%; height: auto; }
   #map text { stroke: none; font-weight: 500; }
+  /* The glow round where the viewer is, slowly brightening and fading. */
+  #map .breathe { transform-box: fill-box; transform-origin: center; animation: breathe 3.2s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: 0.3; transform: scale(0.65); } 50% { opacity: 1; transform: scale(1.1); } }
+  @media (prefers-reduced-motion: reduce) { #map .breathe { animation: none; opacity: 0.7; } }
   #map-note { font-size: 12px; line-height: 1.7; text-align: center; opacity: 0.75; }
   /* The three taps that put the page on an iPhone's home screen, numbered in the accent. */
   #guide { width: min(300px, 100vw - 48px); white-space: normal; }
@@ -121,7 +129,7 @@
 <body>
 <canvas id="stage"></canvas>
 <nav id="dial" aria-label="選單">
-  <p id="where" role="status" hidden></p>
+  <p id="where" role="status"></p>
   <div id="rivers" role="group" aria-label="河流" hidden>
     <i aria-hidden="true"></i>
     <button type="button" data-river="">隨機</button>
@@ -1249,13 +1257,14 @@ function setRivers(choose) {
     option.dataset.river = i + 1;
     row.insertBefore(option, near);
   });
-  // A word over the capsule, for `ms` or until the next.
+  // A word over the capsule, fading in, and out again after `ms` or at the next; it keeps
+  // its words while it fades out.
   let hush = 0;
   const say = (text, ms) => {
-    where.textContent = text;
-    where.hidden = !text;
     clearTimeout(hush);
-    if (ms) hush = setTimeout(() => { where.hidden = true; }, ms);
+    if (text) where.textContent = text;
+    where.classList.toggle('shown', Boolean(text));
+    if (ms) hush = setTimeout(() => where.classList.remove('shown'), ms);
   };
   const place = slipUnder(row);
   const mark = (river) => {
@@ -1490,9 +1499,18 @@ function setAtlas() {
       ...(me ? (() => {
         const [x, y] = at(me.me);
         if (x < 4 || x > W - 4 || y < 4 || y > H - 4) return [];
+        // A point of light with a soft glow round it that slowly brightens and fades.
+        const glow = make('radialGradient', { id: 'glow' });
+        glow.append(
+          make('stop', { offset: 0, 'stop-color': '#f8f6ee', 'stop-opacity': 0.85 }),
+          make('stop', { offset: 1, 'stop-color': '#f8f6ee', 'stop-opacity': 0 }),
+        );
+        const defs = make('defs', {});
+        defs.append(glow);
         return [
-          make('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: 4, fill: '#f8f6ee', stroke: '#1d2026', 'stroke-width': 1.5 }),
-          put(x, y, 0.7, -0.7, '你', '#f8f6ee', false),
+          defs,
+          make('circle', { class: 'breathe', cx: x.toFixed(1), cy: y.toFixed(1), r: 13, fill: 'url(#glow)', stroke: 'none' }),
+          make('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: 3.6, fill: '#f8f6ee', stroke: 'none' }),
         ];
       })() : []),
       make('path', { d: `M${W - 14} ${top + 16}v-14m-4 4l4-4 4 4`, transform: `rotate(${(-turn * 180 / Math.PI).toFixed(1)} ${W - 14} ${top + 9})`, fill: 'none', stroke: '#f8f6ee', 'stroke-width': 1.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.6 }),
@@ -1809,5 +1827,8 @@ async function main() {
 
 main().catch((err) => { console.error(err.message || err); document.getElementById('fail').hidden = false; });
 </script>
+<!-- Counts a visit each time the page is loaded, and keeps no cookie. Choosing a river,
+     or the stretch nearest to the viewer, loads nothing, so it is not counted. -->
+<script data-goatcounter="https://humanhighway.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
