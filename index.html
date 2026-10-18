@@ -665,7 +665,8 @@ const KM = [111.32 * Math.cos(25 * Math.PI / 180), 110.57];
 // Which river the page draws, the one numbered `chosen` from 0 or else any, and where
 // along it and a little of how it is framed, left to chance: a few places to choose the
 // best of. On opening, ?seed= fixes it all and ?river= picks the river by its number from
-// 1; one chosen from the menu, even the one showing, is framed afresh.
+// 1; without it the page opens near HOME (below). One chosen from the menu, even the one
+// showing, is framed afresh.
 function layOut(random, chosen) {
   const pick = (a, b) => a + (b - a) * random();
   const chance = Math.floor(random() * COURSES.length);
@@ -824,6 +825,14 @@ function nearestTo(me) {
     }
   });
   return best;
+}
+
+// With no river asked for, the page opens on the stretch nearest the campaign headquarters,
+// 新府路 88 號 in 板橋 (25.0110N, 121.4654E).
+const HOME = [(121.4654 - 121.5) * KM[0], (25.0110 - 25) * KM[1]];
+if (askedRiver === null) {
+  const home = nearestTo(HOME);
+  Object.assign(LAYOUT, { index: home.index, course: COURSES[home.index], near: { km: home.km, gap: home.gap } });
 }
 
 // The run of a line inside a circle that passes through its point `through`.
@@ -1278,7 +1287,7 @@ function setRivers(choose) {
     if (on) { place(); requestAnimationFrame(() => row.classList.add('set')); }
   };
   let showing = LAYOUT.index;
-  mark(askedRiver === null ? '' : String(askedRiver + 1));
+  mark(String(LAYOUT.index + 1));
   button.addEventListener('click', () => open(row.hidden));
   row.addEventListener('click', (event) => {
     const option = event.target.closest('[data-river]');
@@ -1449,7 +1458,7 @@ function setAtlas() {
     const c = COURSES[index], here = index === LAYOUT.index ? onScreen() : null;
     const S = stretchOf(c, ...c.span), shown = here ? stretchOf(c, ...here.window) : null;
     // Where the viewer is, if the stretch was found from it.
-    const me = here && LAYOUT.near ? LAYOUT.near : null;
+    const me = here && LAYOUT.near?.me ? LAYOUT.near : null;
     // The map takes in the river's own stretch and the box, with room round them, and the
     // viewer if they are not far off.
     turn = here ? here.angle : 0;
